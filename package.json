@@ -1,0 +1,26 @@
+{
+  "name": "payfast",
+  "version": "1.0.0",
+  "description": "API para pagamentos.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LuizParo/nodejs-and-http-alura.git"
+  },
+  "author": "luiz.paro",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/LuizParo/nodejs-and-http-alura/issues"
+  },
+  "homepage": "https://github.com/LuizParo/nodejs-and-http-alura#readme",
+  "dependencies": {
+    "body-parser": "^1.15.2",
+    "consign": "^0.1.2",
+    "express": "^4.14.0",
+    "express-validator": "^3.0.0",
+    "mysql": "^2.12.0"
+  }
+}
