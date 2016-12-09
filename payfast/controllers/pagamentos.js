@@ -40,29 +40,15 @@ module.exports = function(app) {
 
                 clienteCartoes.autoriza(cartao, function(error, request, response, retorno) {
                     if(error) {
-                        res.status(500).json(error);
+                        console.log(error);
+                        res.status(400).json(error);
+                        return;
                     }
 
                     res.status(201).json(retorno);
                 });
                 return;
             }
-
-            var response = {
-                links : [{
-                    href : '/pagamentos/' + resultado.insertId,
-                    rel : 'buscar',
-                    method : 'GET'
-                }, {
-                    href : '/pagamentos/' + resultado.insertId,
-                    rel : 'confirmar',
-                    method : 'PUT'
-                }, {
-                    href : '/pagamentos/' + resultado.insertId,
-                    rel : 'cancelar',
-                    method : 'DELETE'
-                }]
-            };
 
             console.log('pagamento criado: ' + resultado);
             res.location('/pagamentos/' + resultado.insertId);
