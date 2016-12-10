@@ -2,9 +2,70 @@ module.exports = function(app) {
     var connection = app.persistencia.connectionFactory();
     var pagamentoDao = new app.persistencia.PagamentoDao(connection);
     var clienteCartoes = new app.clients.ClienteCartoes();
+    var memcached = new app.clients.MemcachedClient();
 
     app.get('/pagamentos', function(req, res) {
-        res.send('OK');
+        pagamentoDao.lista(function(error, pagamentos) {
+            if(error) {
+                console.log(error);
+                res.status(500).json(error);
+                return;
+            }
+
+            var response = {
+                links : []
+            };
+
+            pagamentos.forEach(function(pagamento) {
+                response.links.push({
+                    href : '/pagamentos/' + pagamento.id,
+                    rel : 'buscar',
+                    method : 'GET'
+                });
+            });
+
+            res.json(response);
+        });
+    });
+
+    app.get('/pagamentos/:id', function(req, res) {
+        var id = req.params.id;
+
+        memcached.busca(id, function(error, retorno) {
+            if(error || !retorno) {
+                console.log('MISS - chave não encontrada');
+
+                pagamentoDao.buscaPorId(id, function(error, pagamentos) {
+                    if(error) {
+                        console.log(error);
+                        res.status(500).json(error);
+                        return;
+                    }
+
+                    var pagamento = pagamentos[0];
+                    if(!pagamento) {
+                        console.log('pagamento com id ' + req.params.id + ' não encontrado');
+                        res.sendStatus(404);
+                        return;
+                    }
+
+                    memcached.guarda(pagamento, function(erro) {
+                        if(erro) {
+                            console.log(erro);
+                            res.status(500).json(erro);
+                            return;
+                        }
+
+                        console.log('pagamento guardado no cache: ' + JSON.stringify(pagamento));
+                        res.json(pagamento);
+                    });
+                });
+            } else {
+                console.log('HIT - valor: ' + JSON.stringify(retorno));
+                console.log('pagamento encontrado');
+                res.json(retorno);
+            }
+        });
     });
 
     app.post('/pagamentos', function(req, res) {
@@ -26,7 +87,6 @@ module.exports = function(app) {
         pagamento.data = new Date;
 
         console.log('iniciando persistencia do pagamento');
-
         pagamentoDao.salva(pagamento, function(error, resultado) {
             if(error) {
                 console.log(error);
@@ -50,21 +110,36 @@ module.exports = function(app) {
                 return;
             }
 
+            memcached.guarda(pagamento, function(erro) {
+                if(erro) {
+                    console.log(erro);
+                    res.status(500).json(erro);
+                    return;
+                }
+
+                console.log('pagamento guardado no cache: ' + JSON.stringify(pagamento));
+                res.json(pagamento);
+            });
+
+            var response = {
+                links : [{
+                    href : '/pagamentos/' + resultado.insertId,
+                    rel : 'buscar',
+                    method : 'GET'
+                }, {
+                    href : '/pagamentos/' + resultado.insertId,
+                    rel : 'confirmar',
+                    method : 'PUT'
+                }, {
+                    href : '/pagamentos/' + resultado.insertId,
+                    rel : 'cancelar',
+                    method : 'DELETE'
+                }]
+            };
+
             console.log('pagamento criado: ' + resultado);
             res.location('/pagamentos/' + resultado.insertId);
             res.status(201).json(response);
-        });
-    });
-
-    app.get('/pagamentos/:id', function(req, res) {
-        pagamentoDao.buscaPorId(req.params.id, function(error, pagamento) {
-            if(error) {
-                console.log(error);
-                res.status(500).json(error);
-                return;
-            }
-
-            res.json(pagamento);
         });
     });
 
@@ -81,7 +156,16 @@ module.exports = function(app) {
                 return;
             }
 
-            res.status(200).json(pagamento);
+            memcached.guarda(pagamento, function(erro) {
+                if(erro) {
+                    console.log(erro);
+                    res.status(500).json(erro);
+                    return;
+                }
+
+                console.log('pagamento guardado no cache: ' + JSON.stringify(pagamento));
+                res.json(pagamento);
+            });
         });
     });
 
@@ -98,7 +182,16 @@ module.exports = function(app) {
                 return;
             }
 
-            res.sendStatus(204);
+            memcached.guarda(pagamento, function(erro) {
+                if(erro) {
+                    console.log(erro);
+                    res.status(500).json(erro);
+                    return;
+                }
+
+                console.log('pagamento guardado no cache: ' + JSON.stringify(pagamento));
+                res.sendStatus(204);
+            });
         });
     });
 };
