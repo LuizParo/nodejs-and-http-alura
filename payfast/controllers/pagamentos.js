@@ -3,6 +3,7 @@ module.exports = function(app) {
     var pagamentoDao = new app.persistencia.PagamentoDao(connection);
     var clienteCartoes = new app.clients.ClienteCartoes();
     var memcached = new app.clients.MemcachedClient();
+    var logger = app.services.logger;
 
     app.get('/pagamentos', function(req, res) {
         pagamentoDao.lista(function(error, pagamentos) {
@@ -57,6 +58,7 @@ module.exports = function(app) {
                         }
 
                         console.log('pagamento guardado no cache: ' + JSON.stringify(pagamento));
+                        logger.info('pagamento guardado no cache: ' + JSON.stringify(pagamento));
                         res.json(pagamento);
                     });
                 });
